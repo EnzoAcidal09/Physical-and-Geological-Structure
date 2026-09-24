@@ -430,7 +430,7 @@ h2 {
   display: grid;
   place-items: center;
   border-left: 1px solid #b6b1a6;
-  overflow: visible;
+  overflow: hidden;
 }
 
 .planet-stamp {
@@ -1159,6 +1159,7 @@ h2 {
 
 .lesson-hero-grid {
   position: relative;
+  min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 280px;
   align-items: center;
@@ -1166,10 +1167,18 @@ h2 {
   padding: 46px 0 52px;
 }
 
+.lesson-title-block {
+  min-width: 0;
+}
+
+.lesson-title-block > p {
+  min-width: 0;
+}
+
 .lesson-title-block h1 {
   max-width: 940px;
   margin: 19px 0 18px;
-  font-size: clamp(48px, 7.5vw, 105px);
+  font-size: clamp(40px, 5.4vw, 88px);
   text-transform: uppercase;
 }
 
@@ -1222,6 +1231,7 @@ h2 {
 }
 
 .lesson-facts > div {
+  min-width: 0;
   min-height: 85px;
   display: flex;
   flex-direction: column;
@@ -2090,6 +2100,7 @@ h2 {
 }
 
 .quiz-heading-grid {
+  min-width: 0;
   display: grid;
   grid-template-columns: minmax(0, 1fr) 270px;
   align-items: end;
@@ -2101,7 +2112,7 @@ h2 {
   max-width: 720px;
   margin: 17px 0 18px;
   color: var(--paper);
-  font-size: clamp(43px, 6vw, 80px);
+  font-size: clamp(36px, 4.8vw, 76px);
   text-transform: uppercase;
 }
 
@@ -2115,6 +2126,11 @@ h2 {
   color: #aaa9a1;
   font-size: 15px;
   line-height: 1.5;
+}
+
+.quiz-heading-grid > *,
+.quiz-score-panel {
+  min-width: 0;
 }
 
 .quiz-score-panel {
@@ -2167,6 +2183,7 @@ h2 {
 }
 
 .quiz-question-card {
+  min-width: 0;
   padding: clamp(25px, 4vw, 45px);
   color: var(--ink);
   background: var(--white);
@@ -2210,6 +2227,7 @@ h2 {
 }
 
 .option-button {
+  min-width: 0;
   min-height: 74px;
   display: flex;
   align-items: center;
@@ -2250,6 +2268,7 @@ h2 {
 }
 
 .option-text {
+  min-width: 0;
   font-size: 14px;
   font-weight: 700;
   line-height: 1.25;
@@ -2705,7 +2724,7 @@ h2 {
   }
 
   .hero-copy h1 {
-    font-size: clamp(46px, 13vw, 75px);
+    font-size: clamp(38px, 11vw, 58px);
   }
 
   .planet-wrap {
@@ -2713,6 +2732,7 @@ h2 {
     border-left: 0;
     border-top: 1px solid #b6b1a6;
     padding-top: 20px;
+    overflow: hidden;
   }
 
   .planet-diagram {
@@ -2809,15 +2829,29 @@ h2 {
   }
 
   .lesson-title-block h1 {
-    font-size: clamp(46px, 14vw, 78px);
+    max-width: 100%;
+    min-width: 0;
+    font-size: clamp(30px, 9vw, 46px);
+    letter-spacing: -0.06em;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  .lesson-title-block > p {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
+  .lesson-hero-actions {
+    min-width: 0;
   }
 
   .lesson-hero-stamp {
-    position: absolute;
-    right: 25px;
-    width: 112px;
-    height: 112px;
-    margin-top: -110px;
+    position: relative;
+    right: auto;
+    width: 96px;
+    height: 96px;
+    margin: 22px 0 0 auto;
     box-shadow: 6px 6px 0 var(--ink);
   }
 
@@ -2909,6 +2943,12 @@ h2 {
     flex-direction: column;
   }
 
+  .terminology-heading h2 {
+    max-width: 100%;
+    font-size: clamp(26px, 7vw, 36px);
+    overflow-wrap: anywhere;
+  }
+
   .terminology-stamp {
     transform: rotate(0);
   }
@@ -2927,12 +2967,42 @@ h2 {
     padding-top: 44px;
   }
 
+  .quiz-heading-grid > * {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .quiz-heading-grid h1 {
+    max-width: 100%;
+    min-width: 0;
+    font-size: clamp(30px, 9vw, 46px);
+    letter-spacing: -0.06em;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  .quiz-heading-grid p {
+    max-width: 100%;
+    overflow-wrap: anywhere;
+  }
+
   .quiz-score-panel {
+    width: 100%;
     max-width: 330px;
   }
 
   .option-list {
     grid-template-columns: 1fr;
+  }
+
+  .option-button,
+  .option-text {
+    min-width: 0;
+  }
+
+  .option-text,
+  .quiz-question-card h2 {
+    overflow-wrap: anywhere;
   }
 
   .result-score-ring {
@@ -2968,7 +3038,7 @@ h2 {
   }
 
   .announcement-divider,
-  .announcement-inner > span:nth-of-type(3) {
+  .announcement-inner > span:nth-of-type(4) {
     display: none;
   }
 
@@ -3089,10 +3159,10 @@ h2 {
   }
 
   .lesson-hero-stamp {
-    right: 19px;
+    right: auto;
     width: 92px;
     height: 92px;
-    margin-top: -85px;
+    margin: 20px 0 0 auto;
   }
 
   .lesson-hero-stamp strong {
@@ -3174,7 +3244,10 @@ h2 {
   }
 
   .quiz-heading-grid h1 {
-    font-size: 46px;
+    font-size: clamp(30px, 9vw, 46px);
+    letter-spacing: -0.06em;
+    overflow-wrap: normal;
+    word-break: normal;
   }
 
   .quiz-heading-grid p {
