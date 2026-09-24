@@ -5,6 +5,7 @@ import {
   BookOpen,
   BrainCircuit,
   Check,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CircleHelp,
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react'
 import { lessons } from './data/lessons'
 import {
+  buildMixedQuizSession,
   buildQuizSession,
   getPercent,
   loadProgress,
@@ -122,7 +124,7 @@ function App() {
           <QuizPage
             key={currentLesson.id}
             lesson={currentLesson}
-            bestScore={progress.quizScores[currentLesson.id] || 0}
+            progress={progress}
             navigate={navigate}
             recordQuizScore={recordQuizScore}
           />
@@ -281,7 +283,7 @@ function HomePage({ navigate, progress, completedCount, quizCount, completedQuiz
           <div className="lab-card-copy">
             <div className="kicker kicker-light">03 / QUIZ LAB</div>
             <h2>Know the rocks.<br /><span>Own the answers.</span></h2>
-            <p>Every quiz is scoped to one lesson, so your feedback stays useful. Take it until the concept is clear.</p>
+            <p>Choose one lesson for focused practice or mix all nine for a randomized course review. Take it until the concept is clear.</p>
             <button className="button button-yellow button-large" onClick={() => navigate('quiz', 1)}>
               Open quiz lab <ArrowUpRight size={19} strokeWidth={2.8} />
             </button>
@@ -301,6 +303,7 @@ function HomePage({ navigate, progress, completedCount, quizCount, completedQuiz
           </div>
           <p>Each lesson keeps a link to the PDF it was built from. Use the field notes for a quick review, then go deeper when you need to.</p>
           <a className="text-link" href="#source-shelf">Browse source files <ArrowRight size={16} /></a>
+          <div className="source-credits"><span>Web builder: Enzo</span><span>PDF reference: Engr. Karl</span></div>
         </div>
       </section>
 
@@ -579,17 +582,68 @@ function LessonQuizCallout({ lesson, navigate }) {
   )
 }
 
-function QuizPage({ lesson, bestScore, navigate, recordQuizScore }) {
-  const [session, setSession] = useState(() => buildQuizSession(lesson.quiz))
+const MIXED_QUESTIONS_PER_LESSON = 3
+
+function createQuizSession(defaultLesson, scope) {
+  if (scope === 'all') return buildMixedQuizSession(lessons, MIXED_QUESTIONS_PER_LESSON)
+  const selectedLesson = lessons.find((item) => String(item.id) === String(scope)) || defaultLesson
+  return buildQuizSession(selectedLesson.quiz)
+}
+
+function QuizScopePicker({ selectedScope, sessionLength, onChange }) {
+  const selectedLesson = lessons.find((lesson) => String(lesson.id) === String(selectedScope))
+  const isMixed = selectedScope === 'all'
+  return (
+    <div className="quiz-scope-picker">
+      <div className="scope-picker-copy">
+        <div className="kicker">QUIZ SCOPE</div>
+        <strong>{isMixed ? 'All lessons / mixed review' : `Lesson ${String(selectedLesson?.id || 1).padStart(2, '0')} / ${selectedLesson?.title}`}</strong>
+        <span>{sessionLength} randomized questions · changing selection starts a new set</span>
+      </div>
+      <label className="lesson-select">
+        <span>Choose a lesson</span>
+        <div className="select-wrap">
+          <select value={selectedScope} onChange={(event) => onChange(event.target.value)} aria-label="Choose quiz lesson">
+            <option value="all">All lessons · randomized</option>
+            {lessons.map((lesson) => <option value={String(lesson.id)} key={lesson.id}>Lesson {String(lesson.id).padStart(2, '0')} · {lesson.title}</option>)}
+          </select>
+          <ChevronDown size={17} strokeWidth={2.5} aria-hidden="true" />
+        </div>
+      </label>
+    </div>
+  )
+}
+
+function QuizPage({ lesson, progress, navigate, recordQuizScore }) {
+  const [selectedScope, setSelectedScope] = useState(String(lesson.id))
+  const [session, setSession] = useState(() => createQuizSession(lesson, String(lesson.id)))
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState({})
   const [finished, setFinished] = useState(false)
 
+  const selectedLesson = selectedScope === 'all' ? lesson : lessons.find((item) => String(item.id) === String(selectedScope)) || lesson
+  const isMixed = selectedScope === 'all'
+  const scoreKey = isMixed ? 'mixed' : selectedScope
+  const bestScore = progress.quizScores[scoreKey] || 0
   const currentQuestion = session[currentIndex]
   const chosenOption = answers[currentIndex]
   const isAnswered = chosenOption !== undefined
   const correctCount = Object.values(answers).filter((answer) => answer?.isCorrect).length
   const score = getPercent(correctCount, session.length)
+  const questionTag = currentQuestion?.type || currentQuestion?.difficulty || 'CORE'
+  const questionContext = isMixed ? `LESSON ${String(currentQuestion?.lessonId).padStart(2, '0')} / ${questionTag}` : `RECALL / ${questionTag}`
+  const scopeTitle = isMixed ? 'whole course' : selectedLesson.title
+  const scopeDescription = isMixed
+    ? 'A mixed review samples three questions from every lesson, then randomizes the full question and option order.'
+    : 'Read the question, choose the best answer, and use the explanation to lock it in.'
+
+  const changeScope = (nextScope) => {
+    setSelectedScope(nextScope)
+    setSession(createQuizSession(lesson, nextScope))
+    setCurrentIndex(0)
+    setAnswers({})
+    setFinished(false)
+  }
 
   const selectAnswer = (optionIndex) => {
     if (isAnswered) return
@@ -599,34 +653,35 @@ function QuizPage({ lesson, bestScore, navigate, recordQuizScore }) {
   const nextQuestion = () => {
     if (currentIndex === session.length - 1) {
       setFinished(true)
-      recordQuizScore(lesson.id, score)
+      recordQuizScore(scoreKey, score)
       return
     }
     setCurrentIndex((index) => index + 1)
   }
 
   const restart = () => {
-    setSession(buildQuizSession(lesson.quiz))
+    setSession(createQuizSession(lesson, selectedScope))
     setCurrentIndex(0)
     setAnswers({})
     setFinished(false)
   }
 
   return (
-    <div className="page quiz-page" style={{ '--lesson-color': lesson.color }}>
+    <div className="page quiz-page" style={{ '--lesson-color': selectedLesson.color }}>
       <section className="quiz-shell section-pad">
         <div className="quiz-topline">
-          <button className="back-link" onClick={() => navigate('lesson', lesson.id)}><ChevronLeft size={17} /> Back to lesson {lesson.number}</button>
-          <div className="quiz-scope"><span className="status-dot" /> Lesson {String(lesson.id).padStart(2, '0')} only</div>
+          <button className="back-link" onClick={() => isMixed ? navigate('home') : navigate('lesson', selectedLesson.id)}><ChevronLeft size={17} /> {isMixed ? 'Back to course map' : `Back to lesson ${selectedLesson.number}`}</button>
+          <div className="quiz-scope"><span className="status-dot" /> {isMixed ? 'All 09 lessons / mixed' : `Lesson ${String(selectedLesson.id).padStart(2, '0')} only`}</div>
         </div>
+        <QuizScopePicker selectedScope={selectedScope} sessionLength={session.length} onChange={changeScope} />
         {!finished ? (
           <>
             <div className="quiz-heading-grid">
-              <div><div className="kicker">QUIZ / FRESH SET</div><h1>Test the <span>{lesson.title}</span> layer.</h1><p>Read the question, choose the best answer, and use the explanation to lock it in.</p></div>
+              <div><div className="kicker">QUIZ / FRESH SET</div><h1>Test the <span>{scopeTitle}</span> layer.</h1><p>{scopeDescription}</p></div>
               <div className="quiz-score-panel"><span>QUESTIONS</span><strong>{String(currentIndex + 1).padStart(2, '0')}<small> / {String(session.length).padStart(2, '0')}</small></strong><div className="quiz-progress-track"><span style={{ width: `${((currentIndex + 1) / session.length) * 100}%` }} /></div><div className="quiz-score-panel-foot"><span>{bestScore ? `Best ${bestScore}%` : 'First attempt'}</span><span>{score}% answered correct</span></div></div>
             </div>
             <div className="quiz-question-card">
-              <div className="question-card-top"><span className="question-number">Q{String(currentIndex + 1).padStart(2, '0')}</span><span className="question-kind">RECALL / {currentQuestion.difficulty || 'CORE'}</span></div>
+              <div className="question-card-top"><span className="question-number">Q{String(currentIndex + 1).padStart(2, '0')}</span><span className="question-kind">{questionContext}</span></div>
               <h2>{currentQuestion.prompt}</h2>
               <div className="option-list">
                 {currentQuestion.options.map((option, optionIndex) => {
@@ -642,27 +697,41 @@ function QuizPage({ lesson, bestScore, navigate, recordQuizScore }) {
             <div className="quiz-controls"><button className="quiz-control-button" onClick={restart}><RotateCcw size={16} /> New shuffled set</button><span><Dices size={15} /> Questions and options are randomized for this attempt.</span></div>
           </>
         ) : (
-          <QuizResults lesson={lesson} session={session} answers={answers} correctCount={correctCount} bestScore={bestScore} onRestart={restart} navigate={navigate} />
+          <QuizResults lesson={selectedLesson} isMixed={isMixed} session={session} answers={answers} correctCount={correctCount} bestScore={bestScore} onRestart={restart} navigate={navigate} />
         )}
       </section>
     </div>
   )
 }
 
-function QuizResults({ lesson, session, answers, correctCount, bestScore, onRestart, navigate }) {
+function QuizResults({ lesson, isMixed, session, answers, correctCount, bestScore, onRestart, navigate }) {
+  const [revealed, setRevealed] = useState(false)
   const score = getPercent(correctCount, session.length)
   const resultMessage = score >= 90 ? 'Excellent recall.' : score >= 70 ? 'Solid foundation.' : 'Good first pass.'
+  const sourceLabel = isMixed ? 'ALL LESSONS' : `LESSON ${String(lesson.id).padStart(2, '0')}`
   return (
-    <div className="results-view">
+    <div className={`results-view ${revealed ? 'is-revealed' : 'score-is-hidden'}`}>
       <div className="result-hero">
-        <div className="kicker">SET COMPLETE / LESSON {String(lesson.id).padStart(2, '0')}</div>
-        <h1>{resultMessage}</h1>
-        <p>You answered {correctCount} of {session.length} questions correctly.</p>
-        <div className="result-score-ring" style={{ '--score': `${score * 3.6}deg` }}><div><strong>{score}%</strong><span>this attempt</span></div></div>
-        <div className="result-stats"><div><span>Correct</span><strong>{correctCount}/{session.length}</strong></div><div><span>Best score</span><strong>{Math.max(bestScore, score)}%</strong></div><div><span>Next step</span><strong>{score >= 70 ? 'Keep moving' : 'Review notes'}</strong></div></div>
-        <div className="result-actions"><button className="button button-dark button-large" onClick={onRestart}><Dices size={19} /> Try a new shuffle</button><button className="button button-light button-large" onClick={() => navigate('lesson', lesson.id)}>Review lesson <BookOpen size={18} /></button></div>
+        <div className="kicker">SET COMPLETE / {sourceLabel}</div>
+        {!revealed ? (
+          <>
+            <h1>Your answers are locked.</h1>
+            <p>Reveal the score when you are ready. The review stays sealed until you do.</p>
+            <div className="result-score-ring score-ring-pending"><div><strong>?</strong><span>score hidden</span></div></div>
+            <div className="result-stats result-stats-locked"><div><span>Correct</span><strong>—</strong></div><div><span>Best score</span><strong>—</strong></div><div><span>Next step</span><strong>Reveal first</strong></div></div>
+            <div className="result-actions"><button className="button button-yellow button-large" onClick={() => setRevealed(true)}><Target size={19} /> Reveal my score</button></div>
+          </>
+        ) : (
+          <>
+            <h1>{resultMessage}</h1>
+            <p>You answered {correctCount} of {session.length} questions correctly.</p>
+            <div className="result-score-ring" style={{ '--score': `${score * 3.6}deg` }}><div><strong>{score}%</strong><span>this attempt</span></div></div>
+            <div className="result-stats"><div><span>Correct</span><strong>{correctCount}/{session.length}</strong></div><div><span>Best score</span><strong>{Math.max(bestScore, score)}%</strong></div><div><span>Next step</span><strong>{score >= 70 ? 'Keep moving' : 'Review notes'}</strong></div></div>
+            <div className="result-actions"><button className="button button-dark button-large" onClick={onRestart}><Dices size={19} /> Try a new shuffle</button><button className="button button-light button-large" onClick={() => isMixed ? navigate('home') : navigate('lesson', lesson.id)}>{isMixed ? 'Back to course map' : 'Review lesson'} <BookOpen size={18} /></button></div>
+          </>
+        )}
       </div>
-      <div className="review-panel"><div className="review-heading"><div><div className="kicker">SET REVIEW</div><h2>Keep the misses close.</h2></div><span>{session.length} questions</span></div><div className="review-list">{session.map((question, index) => { const wasCorrect = Boolean(answers[index]?.isCorrect); return <div className={`review-row ${wasCorrect ? 'is-correct' : 'is-wrong'}`} key={`${question.id}-${index}`}><span className="review-status">{wasCorrect ? <Check size={15} strokeWidth={3} /> : <X size={15} strokeWidth={3} />}</span><div><strong>{question.prompt}</strong><p>{wasCorrect ? 'You got this one.' : question.explanation}</p></div><span className="review-index">{String(index + 1).padStart(2, '0')}</span></div> })}</div></div>
+      {revealed ? <div className="review-panel"><div className="review-heading"><div><div className="kicker">SET REVIEW</div><h2>Keep the misses close.</h2></div><span>{session.length} questions</span></div><div className="review-list">{session.map((question, index) => { const wasCorrect = Boolean(answers[index]?.isCorrect); return <div className={`review-row ${wasCorrect ? 'is-correct' : 'is-wrong'}`} key={`${question.id}-${index}`}><span className="review-status">{wasCorrect ? <Check size={15} strokeWidth={3} /> : <X size={15} strokeWidth={3} />}</span><div><strong>{question.prompt}</strong><p>{wasCorrect ? 'You got this one.' : question.explanation}</p></div><span className="review-index">{String(index + 1).padStart(2, '0')}</span></div> })}</div></div> : <div className="review-locked"><Target size={19} /><strong>Review sealed</strong><span>Reveal your score to see explanations and revisit missed concepts.</span></div>}
     </div>
   )
 }
@@ -672,7 +741,7 @@ function Footer({ navigate }) {
     <footer className="footer section-pad">
       <div className="footer-brand"><div className="brand-lockup"><span className="brand-mark" aria-hidden="true"><span /></span><span className="brand-name">EARTH<span>LAB</span></span></div><p>Study tools for curious geologists.</p></div>
       <div className="footer-links"><button onClick={() => navigate('home')}>Course map</button><button onClick={() => navigate('lesson', 1)}>Study guide</button><button onClick={() => navigate('quiz', 1)}>Quiz lab</button></div>
-      <div className="footer-end">PHYSICAL + GEOLOGICAL STRUCTURE<br /><span>Built for review, not autopilot.</span></div>
+      <div className="footer-end">PHYSICAL + GEOLOGICAL STRUCTURE<br /><span>Web builder: Enzo</span><br /><span>PDF reference: Engr. Karl</span></div>
     </footer>
   )
 }

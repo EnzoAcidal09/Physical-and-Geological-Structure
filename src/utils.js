@@ -21,6 +21,14 @@ export function buildQuizSession(questions) {
   }))
 }
 
+export function buildMixedQuizSession(lessons, questionsPerLesson = 3) {
+  const questions = lessons.flatMap((lesson) => shuffle(lesson.quiz).slice(0, questionsPerLesson).map((question) => ({
+    ...question,
+    lessonId: lesson.id,
+  })))
+  return buildQuizSession(questions)
+}
+
 export function loadProgress() {
   try {
     const saved = window.localStorage.getItem(STORAGE_KEY)
